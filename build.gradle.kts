@@ -33,7 +33,7 @@ repositories {
 
 dependencies {
     implementation("com.jayway.jsonpath:json-path:3.0.0")
-    implementation("net.minidev:json-smart:2.5.2")
+    implementation("net.minidev:json-smart:2.6.0")
     implementation("org.codehaus.jettison:jettison:1.5.5")
 
     testImplementation(libs.junit)
