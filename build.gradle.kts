@@ -1,6 +1,9 @@
+import java.util.Base64
 import org.jetbrains.changelog.Changelog
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import de.shyim.packaging.BundleShopwareLsp
+import de.shyim.packaging.NativePluginDistributions
 
 fun properties(key: String) = providers.gradleProperty(key)
 fun environment(key: String) = providers.environmentVariable(key)
@@ -16,9 +19,72 @@ plugins {
 group = properties("pluginGroup").get()
 version = properties("pluginVersion").get()
 
+val bundleShopwareLsp = tasks.register<BundleShopwareLsp>("bundleShopwareLsp") {
+    manifest = layout.projectDirectory.file("gradle/shopware-lsp.properties")
+    outputDirectory = layout.buildDirectory.dir("shopware-lsp")
+    downloadDirectory = layout.buildDirectory.dir("downloads/shopware-lsp")
+}
+
+val buildNativePlugins = tasks.register<NativePluginDistributions>("buildNativePlugins") {
+    sourceArchive = tasks.buildPlugin.flatMap { it.archiveFile }
+    targets = listOf("mac-arm64", "mac-x86_64", "linux-arm64", "linux-x86_64", "windows-x86_64")
+    outputDirectory = layout.buildDirectory.dir("native-distributions")
+}
+
+val nativeTarget = providers.gradleProperty("nativeTarget")
+if (nativeTarget.isPresent) {
+    require(nativeTarget.get() in listOf("mac-arm64", "mac-x86_64", "linux-arm64", "linux-x86_64", "windows-x86_64")) {
+        "Unsupported nativeTarget: ${nativeTarget.get()}"
+    }
+    val nativeArchiveName = tasks.buildPlugin.flatMap { it.archiveFile }
+        .map { it.asFile.name.removeSuffix(".zip") }
+        .zip(nativeTarget) { name, target -> "$name-$target.zip" }
+    val nativeDirectory = buildNativePlugins.flatMap { it.outputDirectory }
+    tasks.signPlugin {
+        dependsOn(buildNativePlugins)
+        archiveFile = nativeDirectory.zip(nativeArchiveName) { directory, name -> directory.file(name) }
+        signedArchiveFile = layout.buildDirectory.file(nativeArchiveName.map {
+            "signed-native-distributions/${it.removeSuffix(".zip")}-signed.zip"
+        })
+    }
+    tasks.publishPlugin {
+        // Never upload an unsigned or universal archive when publishing a platform variant.
+        archiveFile = tasks.signPlugin.flatMap { it.signedArchiveFile }
+        val signingConfigured = providers.environmentVariable("PRIVATE_KEY").orElse("")
+            .zip(providers.environmentVariable("CERTIFICATE_CHAIN").orElse("")) { key, certificate ->
+                key.isNotBlank() && certificate.isNotBlank()
+            }
+        doFirst {
+            require(signingConfigured.get()) { "Publishing a native distribution requires PRIVATE_KEY and CERTIFICATE_CHAIN" }
+        }
+    }
+    val certificateFile = layout.buildDirectory.file("tmp/native-signing-certificate.pem")
+    val prepareNativeSigningCertificate = tasks.register("prepareNativeSigningCertificate") {
+        val certificate = providers.environmentVariable("CERTIFICATE_CHAIN")
+        inputs.property("certificate", certificate)
+        outputs.file(certificateFile)
+        doLast {
+            val value = certificate.get()
+            certificateFile.get().asFile.apply {
+                parentFile.mkdirs()
+                writeText(runCatching { String(Base64.getDecoder().decode(value.trim())) }.getOrDefault(value))
+            }
+        }
+    }
+    tasks.verifyPluginSignature {
+        dependsOn(tasks.signPlugin)
+        dependsOn(prepareNativeSigningCertificate)
+        inputArchiveFile = tasks.signPlugin.flatMap { it.signedArchiveFile }
+        // Gradle plugin 2.18.1 incorrectly passes certificate content as an extra CLI argument.
+        certificateChain.unset()
+        certificateChain.unsetConvention()
+        certificateChainFile = certificateFile
+    }
+}
+
 // Set the JVM language level used to build the project.
 kotlin {
-    jvmToolchain(21)
+    jvmToolchain(25)
 }
 
 // Configure project's dependencies
@@ -32,8 +98,6 @@ repositories {
 }
 
 dependencies {
-    implementation("com.jayway.jsonpath:json-path:3.0.0")
-    implementation("net.minidev:json-smart:2.6.0")
     implementation("org.codehaus.jettison:jettison:1.5.7")
 
     testImplementation(libs.junit)
@@ -44,6 +108,7 @@ dependencies {
 
         // Plugin Dependencies. Uses `platformBundledPlugins` property from the gradle.properties file for bundled IntelliJ Platform plugins.
         bundledPlugins(providers.gradleProperty("platformBundledPlugins").map { it.split(',') })
+        bundledModules("intellij.platform.ui.jcef", "intellij.libraries.jcef")
 
         // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file for plugin from JetBrains Marketplace.
         plugins(providers.gradleProperty("platformPlugins").map { it.split(',') })
@@ -113,6 +178,7 @@ intellijPlatform {
     pluginVerification {
         ides {
             recommended()
+            create("PS", "2026.2.1")
         }
     }
 }
@@ -150,12 +216,20 @@ tasks {
     // The bundled Vue plugin fails to initialize its LSP service in the test IDE because it cannot
     // resolve its language-server binary from the transformed distribution layout. That failure
     // fires from VFS listeners as soon as a `.js` file is added to a fixture project and is promoted
-    // to a test failure. We don't use Vue, so disable the plugin in the test sandbox.
+    // to a test failure. Disable Vue only in the test sandbox; normal IDEs retain base Vue editing.
     prepareTestSandbox {
+        from(bundleShopwareLsp) {
+            into("${properties("pluginName").get()}/shopware-lsp")
+        }
         val configDir = sandboxConfigDirectory
         doLast {
             configDir.get().asFile.resolve("disabled_plugins.txt")
                 .writeText("org.jetbrains.plugins.vue\n")
+        }
+    }
+    prepareSandbox {
+        from(bundleShopwareLsp) {
+            into("${properties("pluginName").get()}/shopware-lsp")
         }
     }
     processResources {

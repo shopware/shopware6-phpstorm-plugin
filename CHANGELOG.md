@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- Replace native Shopware analysis and generators with bundled Shopware LSP, including catalog-driven scaffolds and the shared entity designer. Requires PhpStorm or IntelliJ IDEA Ultimate 2026.2.
+- Package verified LSP binaries for macOS and Linux on ARM64/x86_64 and Windows on x86_64, with matching Marketplace distributions and no runtime downloads.
+
 ## 0.1.1 - 2026-08-21
 
 - Restored the inheritance gutter markers on Twig blocks that were lost with the reworked Twig template handling in `0.1.0`: a block now shows an "overrides" icon when it overrides a block of the `sw_extends` chain and an "overridden" icon when extending templates override it, both navigating to the related blocks. The markers are provided by the plugin itself and no longer require the Symfony plugin. Fixes #307

@@ -39,7 +39,7 @@ jobs:
         uses: actions/setup-java@v6
         with:
           distribution: zulu
-          java-version: 21
+          java-version: 25
 
       # Setup Gradle
       - name: Setup Gradle
@@ -70,13 +70,16 @@ jobs:
           CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
-        run: ./gradlew publishPlugin -PpluginVersion="$PLUGIN_VERSION" -PpluginChannels="$PLUGIN_CHANNELS"
+        run: |
+          for target in mac-arm64 mac-x86_64 linux-arm64 linux-x86_64 windows-x86_64; do
+            ./gradlew publishPlugin -PpluginVersion="$PLUGIN_VERSION" -PpluginChannels="$PLUGIN_CHANNELS" -PnativeTarget="$target"
+          done
 
       # Upload an artifact as a release asset
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload "$RELEASE_TAG" ./build/distributions/*
+        run: gh release upload "$RELEASE_TAG" ./build/signed-native-distributions/*-signed.zip
 
       # Create a pull request
       - name: Create Pull Request
