@@ -41,6 +41,32 @@ Current features:
   Download the [latest release](https://github.com/shyim/shopware6-phpstorm-plugin/releases/latest) and install it manually using
   <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
 
+### Pre-release updates
+
+To receive pre-release builds, open <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> >
+<kbd>Manage Plugin Repositories...</kbd> and add:
+
+```text
+https://plugins.jetbrains.com/plugins/eap/17632
+```
+
+The EAP channel includes pre-releases and stable releases. Remove this repository to return to stable updates;
+if you want to downgrade immediately, reinstall the plugin from the Marketplace.
+
+## Publishing releases
+
+- Set `pluginVersion` in `gradle.properties` to the next version, such as `0.1.2-eap.1` for a pre-release or `0.1.2` for a stable release.
+- After a successful build on `main`, the workflow creates a draft release. Versions with a pre-release suffix are automatically marked as pre-releases.
+- Review and publish the draft. GitHub releases marked **Set as a pre-release** publish only to `eap`; stable releases publish to both `default` and `eap`.
+
+The release tag supplies the built plugin version (an optional leading `v` is removed). Use a unique pre-release version
+for each build, then publish a separate stable release with a stable version. Changing an existing release's pre-release
+checkbox does not publish another build. Only stable releases create a changelog update pull request.
+
+For local publishing, `./gradlew publishPlugin` infers the same channels from `pluginVersion`.
+Override them with `-PpluginChannels=eap` or `-PpluginChannels=default,eap` if needed.
+See [JetBrains' custom release channel documentation](https://plugins.jetbrains.com/docs/marketplace/custom-release-channels.html).
+
 ## Showcase
 
 ### Components
