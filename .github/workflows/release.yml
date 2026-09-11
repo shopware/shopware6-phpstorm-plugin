@@ -5,7 +5,7 @@
 name: Release
 on:
   release:
-    types: [prereleased, released]
+    types: [published]
 
 jobs:
 
@@ -13,6 +13,9 @@ jobs:
   release:
     name: Publish Plugin
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      PLUGIN_CHANNELS: ${{ github.event.release.prerelease && 'eap' || 'default,eap' }}
     permissions:
       contents: write
       pull-requests: write
@@ -44,6 +47,10 @@ jobs:
         with:
           cache-read-only: true
 
+      # Use the tag version for the archive, plugin manifest, and changelog.
+      - name: Set Release Version
+        run: echo "PLUGIN_VERSION=${RELEASE_TAG#v}" >> "$GITHUB_ENV"
+
       # Update the Unreleased section with the current release note
       - name: Patch Changelog
         if: ${{ github.event.release.body != '' }}
@@ -52,9 +59,9 @@ jobs:
         run: |
           RELEASE_NOTE="./build/tmp/release_note.txt"
           mkdir -p "$(dirname "$RELEASE_NOTE")"
-          echo "$CHANGELOG" > $RELEASE_NOTE
+          echo "$CHANGELOG" > "$RELEASE_NOTE"
 
-          ./gradlew patchChangelog --release-note-file=$RELEASE_NOTE
+          ./gradlew patchChangelog -PpluginVersion="$PLUGIN_VERSION" --release-note-file="$RELEASE_NOTE"
 
       # Publish the plugin to JetBrains Marketplace
       - name: Publish Plugin
@@ -63,30 +70,30 @@ jobs:
           CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
-        run: ./gradlew publishPlugin
+        run: ./gradlew publishPlugin -PpluginVersion="$PLUGIN_VERSION" -PpluginChannels="$PLUGIN_CHANNELS"
 
       # Upload an artifact as a release asset
       - name: Upload Release Asset
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload ${{ github.event.release.tag_name }} ./build/distributions/*
+        run: gh release upload "$RELEASE_TAG" ./build/distributions/*
 
       # Create a pull request
       - name: Create Pull Request
-        if: ${{ github.event.release.body != '' }}
+        if: ${{ !github.event.release.prerelease && github.event.release.body != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="$RELEASE_TAG"
           BRANCH="changelog-update-$VERSION"
           LABEL="release changelog"
 
           git config user.email "action@github.com"
           git config user.name "GitHub Action"
 
-          git checkout -b $BRANCH
+          git checkout -b "$BRANCH"
           git commit -am "Changelog update - $VERSION"
-          git push --set-upstream origin $BRANCH
+          git push --set-upstream origin "$BRANCH"
 
           gh label create "$LABEL" \
             --description "Pull requests with release changelog update" \
@@ -97,4 +104,4 @@ jobs:
             --title "Changelog update - \`$VERSION\`" \
             --body "Current pull request contains patched \`CHANGELOG.md\` file for the \`$VERSION\` version." \
             --label "$LABEL" \
-            --head $BRANCH
+            --head "$BRANCH"
