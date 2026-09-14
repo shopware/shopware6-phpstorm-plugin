@@ -65,7 +65,7 @@ are rejected. Opening or saving generated files remains under IDE control.
 ## Native distributions
 
 `gradle/shopware-lsp.properties` pins the LSP release and archive SHA-256 checksums
-from that release's `SHA256SUMS`. Release 0.3.58 publishes platform VSIX archives;
+from that release's `SHA256SUMS`. Release 0.3.59 publishes platform VSIX archives;
 the build extracts only the executable, license, and shared designer script.
 There are no runtime binary downloads.
 

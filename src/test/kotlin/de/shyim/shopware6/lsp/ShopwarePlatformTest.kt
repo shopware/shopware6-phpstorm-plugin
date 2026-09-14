@@ -26,6 +26,16 @@ class ShopwarePlatformTest : BasePlatformTestCase() {
             }, 30)
             val first = manager.getClients(provider).single()
             assertTrue((first.descriptor as ShopwareLspDescriptor).active)
+            // Decode through the IDE's actual LSP4J transport: a missing report kind used to leave requests pending.
+            val diagnostics = java.util.concurrent.CompletableFuture.supplyAsync {
+                first.sendRequestSync(5_000) { server ->
+                    server.textDocumentService.diagnostic(org.eclipse.lsp4j.DocumentDiagnosticParams().apply {
+                        textDocument = org.eclipse.lsp4j.TextDocumentIdentifier(source.toNioPath().toUri().toString())
+                    })
+                }
+            }
+            com.intellij.testFramework.PlatformTestUtil.waitWithEventsDispatching("LSP4J could not decode diagnostics", { diagnostics.isDone }, 10)
+            assertTrue(requireNotNull(diagnostics.get()).isRelatedFullDocumentDiagnosticReport)
             manager.ensureClientStarted(provider, ShopwareLspDescriptor(project, root))
             assertEquals(1, manager.getClients(provider).size)
             manager.stopClients(provider)

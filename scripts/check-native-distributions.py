@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 targets = ['mac-arm64', 'mac-x86_64', 'linux-arm64', 'linux-x86_64', 'windows-x86_64']
+manifest = dict(line.split('=', 1) for line in (Path(__file__).resolve().parents[1]/'gradle/shopware-lsp.properties').read_text().splitlines() if '=' in line and not line.startswith('#'))
 for target in targets:
     paths = list(Path(sys.argv[1]).glob(f'*-{target}.zip'))
     assert len(paths) == 1, (target, paths)
@@ -18,7 +19,7 @@ for target in targets:
         executable = executables[0]
         prefix = executable.rsplit('/', 1)[0]
         assert hashlib.sha256(archive.read(executable)).hexdigest() == archive.read(prefix+'/sha256.txt').decode().strip()
-        assert archive.read(prefix+'/version.txt').decode().strip() == '0.3.58'
+        assert archive.read(prefix+'/version.txt').decode().strip() == manifest['version']
         assert any(name.endswith('/shopware-lsp/entityDesignerWebview.js') for name in names)
         descriptors = []
         for name in names:

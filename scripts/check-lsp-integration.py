@@ -149,6 +149,8 @@ def check(executable):
             client.notify('textDocument/didClose', {'textDocument':{'uri':file_uri}})
             client.request('shopware/configuration/effective', {})
             client.notify('textDocument/didOpen', {'textDocument':{'uri':template.as_uri(),'languageId':'twig','version':1,'text':template.read_text()}})
+            clean_diagnostics = client.request('textDocument/diagnostic', {'textDocument':{'uri':template.as_uri()}})
+            assert clean_diagnostics['kind'] == 'full' and clean_diagnostics['items'] == [], clean_diagnostics
             definition = client.request('textDocument/definition', {'textDocument':{'uri':template.as_uri()},'position':{'line':0,'character':8}})
             assert definition and definition[0]['uri'].endswith('messages.en-GB.json'), definition
             completion = client.request('textDocument/completion', {'textDocument':{'uri':template.as_uri()},'position':{'line':0,'character':9}})
@@ -159,6 +161,7 @@ def check(executable):
             assert any('Hello 🛍️' in part['value'] for hint in hints for part in hint['label']), hints
             client.notify('textDocument/didChange', {'textDocument':{'uri':template.as_uri(),'version':2},'contentChanges':[{'text':"{{ 'acme.missing'|trans }}\n"}]})
             diagnostics = client.request('textDocument/diagnostic', {'textDocument':{'uri':template.as_uri()}})
+            assert diagnostics['kind'] == 'full', diagnostics
             assert any(item['code'] == 'frontend.snippet.missing' for item in diagnostics['items']), diagnostics
             client.notify('textDocument/didClose', {'textDocument':{'uri':template.as_uri()}})
             client.request('shopware/configuration/effective', {})
@@ -196,6 +199,7 @@ def check_project(executable, root):
         assert symbols, 'Missing Shopware workspace symbols'
         client.notify('textDocument/didOpen', {'textDocument':{'uri':source.as_uri(),'languageId':'php','version':1,'text':source.read_text()}})
         diagnostics = client.request('textDocument/diagnostic', {'textDocument':{'uri':source.as_uri()}})
+        assert diagnostics['kind'] == 'full', diagnostics
         assert not any(str(item.get('code', '')).startswith('php.') or item.get('source', '').startswith('shopware-php') for item in diagnostics['items']), diagnostics
         client.notify('textDocument/didClose', {'textDocument':{'uri':source.as_uri()}})
         print('PASS Shopware source project indexing, framework symbols and duplicate PHP diagnostic suppression', flush=True)
