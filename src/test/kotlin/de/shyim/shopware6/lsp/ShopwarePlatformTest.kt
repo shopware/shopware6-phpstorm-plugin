@@ -2,6 +2,7 @@ package de.shyim.shopware6.lsp
 
 import com.google.gson.JsonArray
 import com.intellij.openapi.extensions.ExtensionPointName
+import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.platform.lsp.api.*
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -17,7 +18,9 @@ class ShopwarePlatformTest : BasePlatformTestCase() {
         val manager = LspClientManager.getInstance(project)
         val provider = ShopwareLspIntegration::class.java
         try {
-            manager.ensureClientStarted(provider, ShopwareLspDescriptor(project, root))
+            val source = myFixture.addFileToProject("src/Example.php", "<?php").virtualFile
+            myFixture.openFileInEditor(source)
+            manager.startClientsIfNeeded(provider)
             com.intellij.testFramework.PlatformTestUtil.waitWithEventsDispatching("Shopware LSP did not initialize", {
                 manager.getClients(provider).any { it.state == LspServerState.Running }
             }, 30)
@@ -52,6 +55,7 @@ class ShopwarePlatformTest : BasePlatformTestCase() {
         val root = myFixture.tempDirFixture.getFile("")!!
         com.intellij.testFramework.PsiTestUtil.addContentRoot(module, root)
         val descriptors = mutableListOf<LspClientDescriptor>()
+        waitForRoot(file, root)
         ShopwareLspIntegration().fileOpened(project, file, object : LspIntegrationProvider.LspClientStarter {
             override fun ensureClientStarted(descriptor: LspClientDescriptor) { descriptors.add(descriptor) }
         })
@@ -143,8 +147,42 @@ class ShopwarePlatformTest : BasePlatformTestCase() {
         val child = root.findChild("child")!!
         com.intellij.testFramework.PsiTestUtil.addContentRoot(module, root)
         com.intellij.testFramework.PsiTestUtil.addContentRoot(module, child)
+        waitForRoot(file, child)
         assertFalse(ShopwareLspDescriptor(project, root).isSupportedFile(file))
         assertTrue(ShopwareLspDescriptor(project, child).isSupportedFile(file))
+    }
+
+    fun testProjectDetectionUpdatesAfterMarkerChanges() {
+        val file = myFixture.addFileToProject("src/Example.php", "<?php").virtualFile
+        val root = myFixture.tempDirFixture.getFile("")!!
+        com.intellij.testFramework.PsiTestUtil.addContentRoot(module, root)
+        val detection = project.service<ShopwareProjectRoots>()
+        fun awaitSupport(expected: Boolean) {
+            com.intellij.testFramework.PlatformTestUtil.waitWithEventsDispatching("Project detection did not update", {
+                detection.supports(root.toNioPath()) == expected
+            }, 10)
+        }
+        awaitSupport(false)
+        val marker = myFixture.addFileToProject("composer.json", """{"type":"shopware-platform-plugin"}""").virtualFile
+        waitForRoot(file, root)
+        com.intellij.openapi.application.WriteAction.run<RuntimeException> {
+            com.intellij.openapi.vfs.VfsUtil.saveText(marker, "{}")
+        }
+        awaitSupport(false)
+        val configuration = myFixture.addFileToProject(".config/shopware/lsp.yaml", "{}").virtualFile
+        waitForRoot(file, root)
+        com.intellij.openapi.application.WriteAction.run<RuntimeException> { configuration.parent.rename(this, "disabled") }
+        awaitSupport(false)
+        com.intellij.openapi.application.WriteAction.run<RuntimeException> { configuration.parent.rename(this, "shopware") }
+        waitForRoot(file, root)
+        com.intellij.openapi.application.WriteAction.run<RuntimeException> { configuration.delete(this) }
+        awaitSupport(false)
+    }
+
+    private fun waitForRoot(file: com.intellij.openapi.vfs.VirtualFile, root: com.intellij.openapi.vfs.VirtualFile) {
+        com.intellij.testFramework.PlatformTestUtil.waitWithEventsDispatching("Project root detection did not complete", {
+            ShopwareLspIntegration.rootFor(project, file) == root
+        }, 10)
     }
 
     private fun textEdit(uri: String, end: Int, text: String) = json("textDocument" to json("uri" to uri), "edits" to JsonArray().apply {

@@ -41,10 +41,19 @@ class ShopwareLspIntegration : LspIntegrationProvider, PluginAware {
 
     companion object {
         fun roots(project: Project): List<VirtualFile> = ProjectRootManager.getInstance(project).contentRoots.toList()
-        fun rootFor(project: Project, file: VirtualFile): VirtualFile? = roots(project)
-            .filter { it.isInLocalFileSystem && VfsUtilCore.isAncestor(it, file, false) }
-            .sortedByDescending { it.path.length }
-            .firstOrNull { ShopwareProjectDetection.supports(it.toNioPath()) }
+        fun rootFor(project: Project, file: VirtualFile): VirtualFile? {
+            val detection = project.service<ShopwareProjectRoots>()
+            for (root in roots(project).filter { it.isInLocalFileSystem && VfsUtilCore.isAncestor(it, file, false) }
+                .sortedByDescending { it.path.length }) {
+                when (detection.supports(root.toNioPath())) {
+                    true -> return root
+                    // Do not attach a nested root to its parent while detection is pending.
+                    null -> return null
+                    false -> Unit
+                }
+            }
+            return null
+        }
     }
 }
 

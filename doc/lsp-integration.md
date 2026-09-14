@@ -12,6 +12,10 @@ Opening a supported file starts one stdio process for its supported project root
 Root detection checks Composer metadata, Shopware app manifests, Symfony
 FrameworkBundle registration, or `.config/shopware/lsp.yaml`. Unrelated projects
 remain inactive. No extra indexing file watcher runs in the adapter.
+Project-marker detection runs in the background and caches both supported and
+unsupported roots. File-support checks only consult memory. IDE VFS events for
+marker files or their parent directories invalidate the affected entries and
+trigger a recheck of open files; ordinary source edits leave the cache intact.
 
 Use **Settings → Tools → Shopware LSP** to select a custom executable, disable
 LSP for a project, or configure editor-local JSON options. The executable override
