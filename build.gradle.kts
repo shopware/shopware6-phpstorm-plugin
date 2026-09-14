@@ -191,6 +191,13 @@ changelog {
 
 // Configure Gradle Kover Plugin - read more: https://github.com/Kotlin/kotlinx-kover#configuration
 kover {
+    currentProject {
+        instrumentation {
+            // Platform tests load the IDE and its plugins. Recording their coverage exhausts
+            // the Gradle daemon heap when Kover aggregates it; only instrument our own code.
+            includedClasses.addAll("de.shyim.shopware6.*", "icons.*")
+        }
+    }
     reports {
         total {
             xml {
