@@ -32,12 +32,16 @@ class ShopwareLspService(private val project: Project) : Disposable {
         catalogs.keys.removeIf { it.descriptor === descriptor }
     }
 
-    fun client(file: VirtualFile): LspClient = LspClientManager.getInstance(project)
+    fun clientOrNull(file: VirtualFile): LspClient? = LspClientManager.getInstance(project)
         .getClients(ShopwareLspIntegration::class.java).filter {
             it.state == LspServerState.Running && (it.descriptor as ShopwareLspDescriptor).active &&
                 it.descriptor.roots.any { root -> VfsUtilCore.isAncestor(root, file, false) }
         }.maxByOrNull { it.descriptor.roots.maxOf { root -> root.path.length } }
+
+    fun client(file: VirtualFile): LspClient = clientOrNull(file)
         ?: error("Shopware LSP is not active for this directory. Open a supported project file and check the Language Services status widget.")
+
+    fun cachedCatalog(file: VirtualFile): JsonObject? = clientOrNull(file)?.let { catalogs[it] }
 
     fun catalog(client: LspClient): JsonObject = catalogs[client] ?: requireNotNull(client.sendRequestSync(30_000) {
         (it as ShopwareLanguageServer).catalog()

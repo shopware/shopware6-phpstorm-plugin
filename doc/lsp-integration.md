@@ -40,9 +40,18 @@ Server-side `workspace/executeCommand` capabilities are handled by the platform.
 
 ## Scaffolds and entities
 
-**New → New Shopware File…** reads its choices, option fields, and workflows from
-`shopware/integration/catalog`. The adapter requests a scaffold and applies its
-returned workspace edit; it never generates PHP, Twig, configuration, or migrations.
+**New → Shopware Platform** restores the Plugin, PHP, App, and Administration
+menus and adds Symfony generators. Entries come from `shopware/integration/catalog`.
+While the catalog loads, **New Shopware File…** offers a searchable artifact picker.
+Selecting an artifact opens a single native form with the name, target directory,
+and all catalog options together. Boolean options use checkboxes; choices use
+dropdowns. Required fields and numeric values are validated in the form.
+
+Component extend/override actions use the same form, prefilled with the selected
+component and method. Inapplicable fields are disabled. Creation runs in the
+background; errors preserve the entered values, and cancelling discards any
+pending response. The adapter applies the returned workspace edit through the IDE;
+it never generates PHP, Twig, configuration, or migrations.
 
 The entity designer embeds the matching release's shared UI in JCEF, including
 entity, mapping, extension, bulk extension, association, translation, hierarchy,

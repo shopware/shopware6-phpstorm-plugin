@@ -28,8 +28,8 @@
         <notificationGroup id="Shopware Telemetry" displayType="STICKY_BALLOON"/>
     </extensions>
     <actions>
-        <action id="ShopwareToolboxNewFile" class="de.shyim.shopware6.lsp.ShopwareNewFileAction">
+        <group id="ShopwareToolboxGroupPlugin" class="de.shyim.shopware6.lsp.ShopwareScaffoldActionGroup" popup="true">
             <add-to-group group-id="NewGroup" anchor="last"/>
-        </action>
+        </group>
     </actions>
 </idea-plugin>

@@ -6,6 +6,7 @@
 
 - Replace native Shopware analysis and generators with bundled Shopware LSP, including catalog-driven scaffolds and the shared entity designer. Requires PhpStorm or IntelliJ IDEA Ultimate 2026.2.
 - Package verified LSP binaries for macOS and Linux on ARM64/x86_64 and Windows on x86_64, with matching Marketplace distributions and no runtime downloads.
+- Restore categorized Shopware generator menus and native forms with all options together, inline validation, and retryable errors instead of sequential input prompts.
 
 ## 0.1.1 - 2026-08-21
 
