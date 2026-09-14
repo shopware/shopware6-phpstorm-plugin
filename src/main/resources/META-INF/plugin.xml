@@ -15,8 +15,6 @@
         <platform.lsp.integrationProvider implementation="de.shyim.shopware6.lsp.ShopwareLspIntegration"/>
         <projectConfigurable id="de.shyim.shopware6.lsp" parentId="tools" displayName="Shopware LSP"
                             instance="de.shyim.shopware6.lsp.ShopwareLspConfigurable"/>
-        <applicationConfigurable id="de.shyim.shopware6.telemetry" parentId="tools" displayName="Shopware 6 Toolbox"
-                                 instance="de.shyim.shopware6.telemetry.TelemetryConfigurable"/>
         <defaultLiveTemplates file="/liveTemplates/Shopware 6 Config_xml.xml"/>
         <defaultLiveTemplates file="/liveTemplates/Shopware 6 PHP.xml"/>
         <defaultLiveTemplates file="/liveTemplates/Shopware 6 General.xml"/>
@@ -25,7 +23,6 @@
         <projectTemplatesFactory implementation="de.shyim.shopware6.installer.ShopwareTemplatesFactory"/>
         <notificationGroup id="Shopware LSP" displayType="BALLOON"/>
         <notificationGroup id="Shopware" displayType="BALLOON" key="notification.group.name"/>
-        <notificationGroup id="Shopware Telemetry" displayType="STICKY_BALLOON"/>
     </extensions>
     <actions>
         <group id="ShopwareToolboxGroupPlugin" class="de.shyim.shopware6.lsp.ShopwareScaffoldActionGroup" popup="true">

@@ -98,8 +98,6 @@ repositories {
 }
 
 dependencies {
-    implementation("org.codehaus.jettison:jettison:1.5.7")
-
     testImplementation(libs.junit)
 
     // IntelliJ Platform Gradle Plugin Dependencies Extension - read more: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html
