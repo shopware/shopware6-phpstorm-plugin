@@ -49,7 +49,7 @@ if (nativeTarget.isPresent) {
     }
     tasks.publishPlugin {
         // Never upload an unsigned or universal archive when publishing a platform variant.
-        archiveFile = tasks.signPlugin.flatMap { it.signedArchiveFile }
+        archiveFiles.setFrom(tasks.signPlugin.flatMap { it.signedArchiveFile })
         val signingConfigured = providers.environmentVariable("PRIVATE_KEY").orElse("")
             .zip(providers.environmentVariable("CERTIFICATE_CHAIN").orElse("")) { key, certificate ->
                 key.isNotBlank() && certificate.isNotBlank()
