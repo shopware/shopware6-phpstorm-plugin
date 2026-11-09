@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+## 0.1.2 - 2026-11-09
+
 - Raised the minimum supported version to PhpStorm 2026.2 (262), extended compatibility to 2026.3 (263.*), and configured Plugin Verifier to check both releases.
 - Declared the XML/HTML dependency explicitly and replaced the removed SwingX combo-box model in the Shopware installer for PhpStorm 2026.3 compatibility.
 
