@@ -14,9 +14,9 @@
 
 name: Build
 on:
-  # Trigger the workflow on pushes to only the 'main' branch (this avoids duplicate checks being run e.g., for dependabot pull requests)
+  # Trigger the workflow on pushes to maintained branches (avoids duplicate checks for feature branches)
   push:
-    branches: [ main ]
+    branches: [ main, '0.1.x' ]
   # Trigger the workflow on any pull request
   pull_request:
 
@@ -183,19 +183,21 @@ jobs:
       - name: Fetch Sources
         uses: actions/checkout@v7
 
-      # Remove old release drafts by using the curl request for the available releases with a draft flag
+      # Remove old release drafts for the current branch
       - name: Remove Old Release Drafts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_BRANCH: ${{ github.ref_name }}
         run: |
           gh api repos/{owner}/{repo}/releases \
-            --jq '.[] | select(.draft == true) | .id' \
+            --jq ".[] | select(.draft == true and .target_commitish == \"$RELEASE_BRANCH\") | .id" \
             | xargs -I '{}' gh api -X DELETE repos/{owner}/{repo}/releases/{}
 
       # Create a new release draft which is not publicly visible and requires manual acceptance
       - name: Create Release Draft
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_BRANCH: ${{ github.ref_name }}
         run: |
           VERSION=$(./gradlew properties --property version --quiet --console=plain | tail -n 1 | cut -f2- -d ' ')
           RELEASE_NOTE="./build/tmp/release_note.txt"
@@ -203,5 +205,6 @@ jobs:
 
           gh release create $VERSION \
             --draft \
+            --target "$RELEASE_BRANCH" \
             --title $VERSION \
             --notes-file $RELEASE_NOTE
