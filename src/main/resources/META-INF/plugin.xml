@@ -5,6 +5,7 @@
     <vendor>Shyim</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.xml</depends>
     <depends>com.jetbrains.php</depends>
     <depends>com.jetbrains.twig</depends>
     <depends>org.jetbrains.plugins.sass</depends>
