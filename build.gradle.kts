@@ -109,7 +109,10 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            recommended()
+            providers.gradleProperty("pluginVerifierIdeVersions").get().split(',').forEach {
+                val (type, version) = it.trim().split('-', limit = 2)
+                create(type, version)
+            }
         }
     }
 }
